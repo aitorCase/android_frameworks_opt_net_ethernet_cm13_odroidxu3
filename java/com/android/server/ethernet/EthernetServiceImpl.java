@@ -53,7 +53,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     private IpConfiguration mIpConfiguration;
 
     private Handler mHandler;
-    private final EthernetNetworkFactory mTracker;
+    private final EthernetNetworkFactory mTracker0, mTracker1;
     private final RemoteCallbackList<IEthernetServiceListener> mListeners =
             new RemoteCallbackList<IEthernetServiceListener>();
 
@@ -65,7 +65,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         Log.i(TAG, "Read stored IP configuration: " + mIpConfiguration);
 
-        mTracker = new EthernetNetworkFactory(mListeners);
+        mTracker0 = new EthernetNetworkFactory(mListeners);
+        mTracker1 = new EthernetNetworkFactory(mListeners);
     }
 
     private void enforceAccessPermission() {
@@ -87,7 +88,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         handlerThread.start();
         mHandler = new Handler(handlerThread.getLooper());
 
-        mTracker.start(mContext, mHandler);
+        mTracker0.start(mContext, mHandler, "eth0");
+        mTracker1.start(mContext, mHandler, "eth1");
 
         mStarted.set(true);
     }
@@ -123,8 +125,10 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             // Fix this by making IpConfiguration a complete representation of static configuration.
             if (!config.equals(mIpConfiguration)) {
                 mIpConfiguration = new IpConfiguration(config);
-                mTracker.stop();
-                mTracker.start(mContext, mHandler);
+                mTracker0.stop();
+                mTracker0.start(mContext, mHandler, "eth0");
+                mTracker1.stop();
+                mTracker1.start(mContext, mHandler, "eth1");
             }
         }
     }
@@ -136,7 +140,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public boolean isAvailable() {
         enforceAccessPermission();
-        return mTracker.isTrackingInterface();
+        return mTracker0.isTrackingInterface() || mTracker1.isTrackingInterface();
+
     }
 
     /**
@@ -176,7 +181,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         pw.println("Current Ethernet state: ");
         pw.increaseIndent();
-        mTracker.dump(fd, pw, args);
+        mTracker0.dump(fd, pw, args);
+        mTracker1.dump(fd, pw, args);
         pw.decreaseIndent();
 
         pw.println();

@@ -89,15 +89,15 @@ class EthernetNetworkFactory {
     private Context mContext;
 
     /** Product-dependent regular expression of interface names we track. */
-    private static String mIfaceMatch = "";
+    private String mIfaceMatch = "";
 
     /** To notify Ethernet status. */
     private final RemoteCallbackList<IEthernetServiceListener> mListeners;
 
     /** Data members. All accesses to these must be synchronized(this). */
-    private static String mIface = "";
+    private String mIface = "";
     private String mHwAddr;
-    private static boolean mLinkUp;
+    private boolean mLinkUp;
     private NetworkInfo mNetworkInfo;
     private LinkProperties mLinkProperties;
 
@@ -143,6 +143,10 @@ class EthernetNetworkFactory {
             // so we get dropped.  TODO - just unregister the factory
             // when link goes down.
             mFactory.setScoreFilter(up ? NETWORK_SCORE : -1);
+            // If link is up, call dhcp whatever score we have.
+            if (up) {
+                onRequestNetwork();
+            }
         }
     }
 
@@ -349,15 +353,14 @@ class EthernetNetworkFactory {
     /**
      * Begin monitoring connectivity
      */
-    public synchronized void start(Context context, Handler target) {
+    public synchronized void start(Context context, Handler target, String ifaceMatch) {
         // The services we use.
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
         mNMService = INetworkManagementService.Stub.asInterface(b);
         mEthernetManager = (EthernetManager) context.getSystemService(Context.ETHERNET_SERVICE);
 
         // Interface match regex.
-        mIfaceMatch = context.getResources().getString(
-                com.android.internal.R.string.config_ethernet_iface_regex);
+        mIfaceMatch = ifaceMatch;
 
         // Create and register our NetworkFactory.
         mFactory = new LocalNetworkFactory(NETWORK_TYPE, context, target.getLooper());
